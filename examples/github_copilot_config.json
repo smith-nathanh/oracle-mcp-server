@@ -1,0 +1,225 @@
+{
+  "_comment": "GitHub Copilot MCP Configuration Examples for Oracle Database",
+  
+  "claude_desktop_config": {
+    "description": "Configuration for Claude Desktop application",
+    "file_location": "~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%/Claude/claude_desktop_config.json (Windows)",
+    "config": {
+      "mcpServers": {
+        "oracle-database": {
+          "command": "python",
+          "args": ["-m", "oracle_mcp_server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://username:password@hostname:1521/?service_name=XEPDB1",
+            "TABLE_WHITE_LIST": "EMPLOYEES,DEPARTMENTS,JOBS,LOCATIONS",
+            "COLUMN_WHITE_LIST": "EMPLOYEES.EMPLOYEE_ID,EMPLOYEES.EMAIL,DEPARTMENTS.DEPARTMENT_NAME",
+            "QUERY_LIMIT_SIZE": "100",
+            "DEBUG": "False"
+          }
+        }
+      }
+    }
+  },
+
+  "vscode_copilot_config": {
+    "description": "Configuration for VS Code with GitHub Copilot",
+    "file_location": ".vscode/settings.json in your workspace",
+    "config": {
+      "github.copilot.chat.mcp.servers": {
+        "oracle-database": {
+          "command": "oracle-mcp-server",
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://username:password@hostname:1521/?service_name=XEPDB1",
+            "TABLE_WHITE_LIST": "EMPLOYEES,DEPARTMENTS",
+            "QUERY_LIMIT_SIZE": "50"
+          }
+        }
+      }
+    }
+  },
+
+  "claude_desktop_config_uv": {
+    "description": "Configuration for Claude Desktop using uv",
+    "file_location": "~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%/Claude/claude_desktop_config.json (Windows)",
+    "config": {
+      "mcpServers": {
+        "oracle-database": {
+          "command": "uv",
+          "args": ["run", "--directory", "/path/to/oracle-mcp-server", "oracle-mcp-server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://username:password@hostname:1521/?service_name=XEPDB1",
+            "TABLE_WHITE_LIST": "EMPLOYEES,DEPARTMENTS,JOBS,LOCATIONS",
+            "COLUMN_WHITE_LIST": "EMPLOYEES.EMPLOYEE_ID,EMPLOYEES.EMAIL,DEPARTMENTS.DEPARTMENT_NAME",
+            "QUERY_LIMIT_SIZE": "100",
+            "DEBUG": "False"
+          }
+        }
+      }
+    }
+  },
+
+  "cursor_mcp_config_uv": {
+    "description": "Configuration for Cursor IDE using uv",
+    "file_location": ".cursor/mcp.json in your workspace",
+    "config": {
+      "mcpServers": {
+        "oracle-database": {
+          "command": "uv",
+          "args": ["run", "oracle-mcp-server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://username:password@hostname:1521/?service_name=XEPDB1"
+          }
+        }
+      }
+    }
+  },
+
+  "published_package_config": {
+    "description": "Configuration using published package from PyPI",
+    "config": {
+      "mcpServers": {
+        "oracle-database": {
+          "command": "uvx",
+          "args": ["oracle-mcp-server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://username:password@hostname:1521/?service_name=XEPDB1"
+          }
+        }
+      }
+    }
+  },
+
+  "development_config": {
+    "description": "Development configuration with debug enabled",
+    "config": {
+      "mcpServers": {
+        "oracle-database-dev": {
+          "command": "python",
+          "args": ["-m", "oracle_mcp_server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://hr:password@localhost:1521/?service_name=XEPDB1",
+            "DEBUG": "True",
+            "QUERY_LIMIT_SIZE": "10"
+          }
+        }
+      }
+    }
+  },
+
+  "production_config": {
+    "description": "Production configuration with security restrictions",
+    "config": {
+      "mcpServers": {
+        "oracle-database-prod": {
+          "command": "oracle-mcp-server",
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://readonly_user:secure_password@prod-db:1521/?service_name=PROD",
+            "TABLE_WHITE_LIST": "EMPLOYEES,DEPARTMENTS,PROJECTS,CUSTOMERS",
+            "COLUMN_WHITE_LIST": "EMPLOYEES.EMPLOYEE_ID,EMPLOYEES.FIRST_NAME,EMPLOYEES.LAST_NAME,DEPARTMENTS.DEPARTMENT_NAME",
+            "QUERY_LIMIT_SIZE": "100",
+            "MAX_ROWS_EXPORT": "5000",
+            "DEBUG": "False"
+          }
+        }
+      }
+    }
+  },
+
+  "multi_environment_config": {
+    "description": "Configuration for multiple Oracle environments",
+    "config": {
+      "mcpServers": {
+        "oracle-dev": {
+          "command": "python",
+          "args": ["-m", "oracle_mcp_server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://dev_user:dev_pass@dev-oracle:1521/?service_name=DEV",
+            "TABLE_WHITE_LIST": "EMPLOYEES,DEPARTMENTS",
+            "DEBUG": "True"
+          }
+        },
+        "oracle-staging": {
+          "command": "python", 
+          "args": ["-m", "oracle_mcp_server"],
+          "env": {
+            "DB_CONNECTION_STRING": "oracle+oracledb://stage_user:stage_pass@staging-oracle:1521/?service_name=STAGE",
+            "TABLE_WHITE_LIST": "EMPLOYEES,DEPARTMENTS,CUSTOMERS",
+            "QUERY_LIMIT_SIZE": "200"
+          }
+        }
+      }
+    }
+  },
+
+  "docker_config": {
+    "description": "Configuration using Docker for Oracle MCP server",
+    "config": {
+      "mcpServers": {
+        "oracle-database": {
+          "command": "docker",
+          "args": [
+            "run", "-i", "--rm",
+            "--network", "host",
+            "-e", "DB_CONNECTION_STRING=oracle+oracledb://username:password@localhost:1521/?service_name=XEPDB1",
+            "oracle-mcp-server:latest"
+          ]
+        }
+      }
+    }
+  },
+
+  "example_prompts": {
+    "description": "Example prompts to use with GitHub Copilot Agent Mode",
+    "prompts": [
+      "@agent Can you analyze our Oracle database schema and show me all the tables with their relationships?",
+      
+      "@agent I need to understand our employee data structure. Please:\n1. List all employee-related tables\n2. Show the schema for the main EMPLOYEES table\n3. Generate some sample queries to explore the data\n4. Show me the relationships between employee and department tables",
+      
+      "@agent Help me optimize this Oracle query performance:\nSELECT e.employee_id, e.first_name, e.last_name, d.department_name, j.job_title\nFROM employees e\nJOIN departments d ON e.department_id = d.department_id\nJOIN jobs j ON e.job_id = j.job_id\nWHERE e.salary > 50000\nORDER BY e.salary DESC\n\nPlease analyze the execution plan and suggest improvements.",
+      
+      "@agent Create a comprehensive report about our customer database:\n1. What tables contain customer information?\n2. Show customer demographics breakdown\n3. Find our top 10 customers by revenue\n4. Export the results as CSV for further analysis",
+      
+      "@agent I'm investigating data quality issues. Please:\n1. Check for duplicate records in the EMPLOYEES table\n2. Find any NULL values in critical columns\n3. Validate foreign key relationships\n4. Generate data quality summary report"
+    ]
+  },
+
+  "troubleshooting": {
+    "common_issues": {
+      "connection_refused": {
+        "error": "Connection refused to Oracle database",
+        "solutions": [
+          "Verify Oracle database is running",
+          "Check firewall settings",
+          "Validate connection string format",
+          "Ensure network connectivity to database host"
+        ]
+      },
+      "authentication_failed": {
+        "error": "ORA-01017: invalid username/password",
+        "solutions": [
+          "Verify username and password in connection string",
+          "Check if account is locked",
+          "Ensure user has necessary privileges",
+          "Try connecting with SQL*Plus to verify credentials"
+        ]
+      },
+      "service_name_error": {
+        "error": "ORA-12514: TNS:listener does not currently know of service",
+        "solutions": [
+          "Verify service name is correct",
+          "Check Oracle listener status",
+          "Use SID instead of service name if needed",
+          "Verify tnsnames.ora configuration"
+        ]
+      },
+      "permission_denied": {
+        "error": "Only SELECT statements are allowed",
+        "solutions": [
+          "This is a security feature",
+          "Use only SELECT, DESCRIBE, or EXPLAIN PLAN statements",
+          "Check if you need to modify TABLE_WHITE_LIST or COLUMN_WHITE_LIST"
+        ]
+      }
+    }
+  }
+}

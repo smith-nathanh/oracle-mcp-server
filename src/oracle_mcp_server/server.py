@@ -14,6 +14,7 @@ Features:
 - Database health monitoring
 """
 
+import argparse
 import asyncio
 import json
 import logging
@@ -51,8 +52,8 @@ COLUMN_WHITE_LIST = (
     if os.getenv("COLUMN_WHITE_LIST")
     else []
 )
-QUERY_LIMIT_SIZE = int(os.getenv("QUERY_LIMIT_SIZE", "100"))
-MAX_ROWS_EXPORT = int(os.getenv("MAX_ROWS_EXPORT", "10000"))
+QUERY_LIMIT_SIZE = int(os.getenv("QUERY_LIMIT_SIZE") or "100")
+MAX_ROWS_EXPORT = int(os.getenv("MAX_ROWS_EXPORT") or "10000")
 
 if DEBUG:
     logging.getLogger().setLevel(logging.DEBUG)
@@ -935,7 +936,6 @@ async def async_main():
 
 def main():
     """Synchronous entry point for console scripts"""
-    import argparse
 
     parser = argparse.ArgumentParser(description="Oracle Database MCP Server")
     parser.add_argument("--version", action="version", version="1.0.0")

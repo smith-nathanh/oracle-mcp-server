@@ -24,6 +24,12 @@ This Model Context Protocol (MCP) server provides comprehensive Oracle Database 
 - **Data Export** - Export query results in JSON and CSV formats
 - **Security Controls** - Whitelist tables/columns and enforce read-only operations
 
+### GitHub Copilot Agent Interaction
+
+![Oracle MCP Server in GitHub Copilot](assets/screenshot.png)
+
+*Example of the Oracle MCP Server responding to database queries through GitHub Copilot's agent model interface*
+
 ## Documentation
 
 📚 **Setup Guides:**

@@ -25,7 +25,9 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import oracledb
-from mcp.server import NotificationOptions, Server
+from mcp import stdio_server
+from mcp.server import Server
+from mcp.server.lowlevel import NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.types import Resource, TextContent, Tool
 from pydantic import AnyUrl
@@ -918,23 +920,14 @@ class OracleMCPServer:
         # Setup handlers
         await self.setup_handlers()
 
-        # Initialize server
-        async with self.server.create_initialization_options() as (
-            read_stream,
-            write_stream,
-        ):
-            await self.server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="oracle-database",
-                    server_version="1.0.0",
-                    capabilities=self.server.get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={},
-                    ),
-                ),
+        # Run server using stdio transport
+        async with stdio_server() as streams:
+            initialization_options = InitializationOptions(
+                server_name="oracle-database",
+                server_version="1.0.0",
+                capabilities=self.server.get_capabilities(NotificationOptions(), {}),
             )
+            await self.server.run(*streams, initialization_options)
 
 
 async def async_main():

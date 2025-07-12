@@ -74,15 +74,35 @@ class OracleConnection:
             if not self.connection_string:
                 raise ValueError("Database connection string is required")
 
+            # Parse connection string format: user/password@host:port/service_name
+            if "@" in self.connection_string:
+                user_pass, dsn = self.connection_string.split("@", 1)
+                if "/" in user_pass:
+                    user, password = user_pass.split("/", 1)
+                else:
+                    user = user_pass
+                    password = None
+            else:
+                # If no @ symbol, assume it's a full DSN and no user/password
+                user = None
+                password = None
+                dsn = self.connection_string
+
             # Create connection pool for better performance
-            self.pool = oracledb.create_pool(
-                dsn=self.connection_string,
-                min=1,
-                max=10,
-                increment=1,
-                threaded=True,
-                getmode=oracledb.POOL_GETMODE_WAIT,
-            )
+            pool_params = {
+                "dsn": dsn,
+                "min": 1,
+                "max": 10,
+                "increment": 1,
+                "getmode": oracledb.POOL_GETMODE_WAIT,
+            }
+
+            if user:
+                pool_params["user"] = user
+            if password:
+                pool_params["password"] = password
+
+            self.pool = oracledb.create_pool(**pool_params)
             logger.info("Oracle connection pool initialized successfully")
 
         except Exception as e:

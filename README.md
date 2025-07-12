@@ -2,6 +2,16 @@
 
 Oracle Database MCP Server for GitHub Copilot Agent Mode
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Setup](#quick-setup)
+- [Docker Setup for Testing](#docker-setup-for-testing) 🐳
+- [VS Code Integration](#vs-code-integration)
+- [Configuration](#configuration)
+- [Available Tools](#available-tools)
+- [Documentation](#documentation)
+
 ## Overview
 
 This Model Context Protocol (MCP) server provides comprehensive Oracle Database interaction capabilities, optimized for use with GitHub Copilot's agentic workflows.
@@ -13,6 +23,15 @@ This Model Context Protocol (MCP) server provides comprehensive Oracle Database 
 - **Performance Analysis** - Get execution plans and query performance metrics
 - **Data Export** - Export query results in JSON and CSV formats
 - **Security Controls** - Whitelist tables/columns and enforce read-only operations
+
+## Documentation
+
+📚 **Setup Guides:**
+- [Docker Example Setup](docker-example/README.md) - Complete Oracle database in Docker with sample data
+- [Complete Setup Guide](docs/SETUP_GUIDE.md) - Step-by-step instructions for any Oracle database
+- [Quick Reference](docs/QUICK_REFERENCE.md) - Credentials, commands, and troubleshooting
+
+🐳 **New to Oracle?** Start with the [Docker Example](docker-example/) to get running in minutes!
 
 ## Quick Setup
 
@@ -45,6 +64,38 @@ This Model Context Protocol (MCP) server provides comprehensive Oracle Database 
 
 4. **Set up VS Code integration:**
    See the [VS Code Integration](#vs-code-integration) section below for detailed setup instructions.
+
+## Docker Setup for Testing
+
+🐳 **New to Oracle?** Get a complete test environment running in minutes!
+
+We provide a ready-to-use Docker setup with Oracle Database XE and sample data. Perfect for:
+- Testing the MCP server
+- Learning Oracle database interactions  
+- Development and prototyping
+
+### Quick Start
+```bash
+# Start Oracle database with sample data
+cd docker-example
+docker-compose up -d
+
+# Configure MCP server
+cp .env.docker ../.env
+
+# Test the setup
+cd .. && uv run oracle-mcp-server --version
+```
+
+### What You Get
+- **Oracle Database XE 21c** running in Docker
+- **Sample database** with employees and departments tables
+- **Test user** (`testuser/TestUser123!`) with appropriate permissions
+- **Ready-to-use connection** string for the MCP server
+
+📖 **[Complete Docker Setup Guide →](docker-example/README.md)**
+
+The Docker example includes detailed instructions, troubleshooting, sample queries, and management commands.
 
 ## VS Code Integration
 
@@ -146,7 +197,10 @@ The project includes VS Code-specific configurations:
 ### Connection String Examples
 
 ```bash
-# Local Oracle XE
+# Docker test database (from this project's setup)
+DB_CONNECTION_STRING="testuser/TestUser123!@localhost:1521/testdb"
+
+# Local Oracle XE (traditional format)
 DB_CONNECTION_STRING="oracle+oracledb://system:password@localhost:1521/?service_name=XE"
 
 # Oracle Cloud Autonomous Database
@@ -155,6 +209,10 @@ DB_CONNECTION_STRING="oracle+oracledb://admin:password@hostname:1522/?service_na
 # Production with connection pooling
 DB_CONNECTION_STRING="oracle+oracledb://app_user:password@db.company.com:1521/?service_name=PROD&pool_size=10"
 ```
+
+**Note:** The MCP server supports two connection string formats:
+- **Simple format:** `username/password@host:port/service_name` (recommended for Docker setup)
+- **URL format:** `oracle+oracledb://username:password@host:port/?service_name=service_name` (for compatibility)
 
 ## Available Tools
 

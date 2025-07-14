@@ -24,11 +24,73 @@ This Model Context Protocol (MCP) server provides comprehensive Oracle Database 
 - **Data Export** - Export query results in JSON and CSV formats
 - **Security Controls** - Whitelist tables/columns and enforce read-only operations
 
+### Query Execution Capabilities
+
+The MCP server provides rich query execution with automatic safety controls:
+
+- **Automatic Row Limiting**: SELECT queries are automatically limited to prevent resource exhaustion (configurable via `QUERY_LIMIT_SIZE`)
+- **SQL Injection Prevention**: Built-in keyword filtering blocks dangerous operations (DROP, DELETE, UPDATE, etc.)
+- **Smart Query Enhancement**: Queries without explicit ROWNUM/LIMIT clauses get automatic pagination
+- **Data Type Handling**: Automatic conversion of Oracle-specific types (LOB, DATE, NUMBER) to JSON-serializable formats
+- **Execution Metrics**: Every query returns execution time and row count statistics
+
+**Example Query Response:**
+```json
+{
+  "columns": ["EMPLOYEE_ID", "FIRST_NAME", "LAST_NAME", "SALARY"],
+  "rows": [[100, "Steven", "King", 24000], [101, "Neena", "Kochhar", 17000]],
+  "row_count": 2,
+  "execution_time_seconds": 0.045,
+  "query": "SELECT employee_id, first_name, last_name, salary FROM employees WHERE ROWNUM <= 100"
+}
+```
+
+### Schema Inspection Capabilities
+
+The server provides comprehensive database metadata that helps LLMs understand your database structure:
+
+- **Table Discovery**: Lists all accessible tables with row counts, last analysis dates, and comments
+- **Column Details**: Provides data types, nullable constraints, default values, and column comments
+- **Relationship Insights**: Views and their underlying table relationships
+- **Stored Procedures**: Available functions, procedures, and packages with their status
+
+**Example Table Metadata:**
+```json
+{
+  "owner": "HR",
+  "table_name": "EMPLOYEES",
+  "columns": [
+    {
+      "column_name": "EMPLOYEE_ID",
+      "data_type": "NUMBER",
+      "nullable": "N",
+      "column_comment": "Primary key of employees table"
+    },
+    {
+      "column_name": "FIRST_NAME",
+      "data_type": "VARCHAR2",
+      "data_length": 20,
+      "nullable": "Y",
+      "column_comment": "First name of the employee"
+    }
+  ],
+  "table_comment": "Employees information including salary and department"
+}
+```
+
+### Performance Analysis Features
+
+- **Execution Plans**: Generate and analyze query execution plans with cost estimates
+- **Query Optimization**: Identify table scans, index usage, and performance bottlenecks
+- **Resource Estimates**: Cost, cardinality, and byte estimates for query operations
+
 ### GitHub Copilot Agent Interaction
 
 ![Oracle MCP Server in GitHub Copilot](assets/screenshot.png)
 
 *Example of the Oracle MCP Server responding to database queries through GitHub Copilot's agent model interface*
+
+When GitHub Copilot interacts with the MCP server, it receives structured data that enables sophisticated database assistance including query generation, schema understanding, and performance optimization recommendations.
 
 ## Documentation
 
@@ -82,14 +144,14 @@ We provide a ready-to-use Docker setup with Oracle Database XE and sample data. 
 
 ### Quick Start
 ```bash
-# Start Oracle database with sample data
+# 1. Start Oracle database with sample data
 cd docker-example
 docker-compose up -d
 
-# Configure MCP server
+# 2. Configure MCP server
 cp .env.docker ../.env
 
-# Test the setup
+# 3. Test the setup
 cd .. && uv run oracle-mcp-server --version
 ```
 
@@ -124,12 +186,14 @@ The Docker example includes detailed instructions, troubleshooting, sample queri
    ```json
    {
      "servers": {
-       "oracle-database": {
-         "type": "stdio",
+       "oracle-mcp-server": {
          "command": "uv",
-         "args": ["run", "oracle-mcp-server"],
+         "args": ["run", "python", "-m", "oracle_mcp_server.server"],
          "env": {
-           "DB_CONNECTION_STRING": "${env:DB_CONNECTION_STRING}"
+           "DB_CONNECTION_STRING": "${env:DB_CONNECTION_STRING}",
+           "DEBUG": "${env:DEBUG}",
+           "QUERY_LIMIT_SIZE": "${env:QUERY_LIMIT_SIZE}",
+           "MAX_ROWS_EXPORT": "${env:MAX_ROWS_EXPORT}"
          }
        }
      }
@@ -236,8 +300,39 @@ When integrated with GitHub Copilot, the following tools are available:
 ## Development
 
 ### Running Tests
+
+The project includes a comprehensive test suite with unit tests, integration tests, and utility tests.
+
 ```bash
-uv run pytest tests/
+# Run all tests
+uv run pytest
+
+# Run only unit tests (fast, no database required)
+uv run pytest -m unit
+
+# Run only integration tests (requires real database)
+uv run pytest -m integration
+
+# Run tests with coverage report
+uv run pytest --cov=src/oracle_mcp_server
+
+# Run specific test file
+uv run pytest tests/test_oracle_connection.py
+
+# Run tests with verbose output
+uv run pytest -v
+```
+
+**Test Categories:**
+- **Unit Tests** (`-m unit`): Fast tests using mocks, no database required
+- **Integration Tests** (`-m integration`): Tests against real Oracle database
+- **Slow Tests** (`-m slow`): Performance and stress tests
+
+**For Integration Tests:**
+Set the `TEST_DB_CONNECTION_STRING` environment variable to run integration tests:
+```bash
+export TEST_DB_CONNECTION_STRING="testuser/testpass@localhost:1521/testdb"
+uv run pytest -m integration
 ```
 
 ### Code Formatting
@@ -306,5 +401,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Support
 
 - Check the [Issues](https://github.com/yourusername/oracle-mcp-server/issues) page
-- Review [sample queries](examples/sample_queries.sql)
-- See [configuration examples](examples/github_copilot_config.json)
+- Review the [Docker Example](docker-example/README.md) for sample queries
+- See [Complete Setup Guide](docs/SETUP_GUIDE.md) for configuration examples

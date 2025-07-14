@@ -173,8 +173,8 @@ docker ps
 docker-example/
 ├── docker-compose.yml          # Database container configuration
 ├── .env.docker                 # MCP server connection settings
-├── setup_testuser.sql          # Database initialization script
-├── init-scripts/
+├── init-scripts/               # Automatic database initialization
+│   ├── 00-create-user.sql     # User creation and permissions
 │   └── 01-sample-data.sql     # Sample data creation
 └── README.md                   # This file
 ```

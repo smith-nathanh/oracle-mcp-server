@@ -129,6 +129,11 @@ When GitHub Copilot interacts with the MCP server, it receives structured data t
    ```bash
    uv run oracle-mcp-server --debug
    ```
+   
+   *Alternative: Use the startup script for automatic environment setup:*
+   ```bash
+   ./start_mcp_server.sh --debug
+   ```
 
 4. **Set up VS Code integration:**
    See the [VS Code Integration](#vs-code-integration) section below for detailed setup instructions.
@@ -241,6 +246,39 @@ Once configured, you can interact with your Oracle database through GitHub Copil
 - Ensure GitHub Copilot extension is activated
 - Check that `.vscode/mcp.json` exists in the workspace
 - Verify environment variables are loading (check VS Code terminal: `echo $DB_CONNECTION_STRING`)
+
+### Alternative: Using the Startup Script
+
+For environments where the MCP server needs explicit environment setup, you can use the included startup script:
+
+```bash
+# Use the startup script instead of direct Python execution
+./start_mcp_server.sh --version
+```
+
+**The startup script automatically:**
+- Activates the Python virtual environment
+- Loads environment variables from `.env` file
+- Verifies database connection string is available
+- Starts the MCP server with proper configuration
+
+**To use with VS Code MCP configuration, update `.vscode/mcp.json`:**
+```json
+{
+  "servers": {
+    "oracle-mcp-server": {
+      "command": "./start_mcp_server.sh",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+This is particularly useful when:
+- Environment variables aren't loading automatically
+- Virtual environment isn't being detected
+- You need consistent startup behavior across different environments
 
 ### Development with VS Code
 

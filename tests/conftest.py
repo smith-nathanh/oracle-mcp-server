@@ -1,6 +1,7 @@
 import asyncio
 import os
 import pytest
+import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, Mock
 from typing import AsyncGenerator, Dict, Any, List
 
@@ -43,7 +44,7 @@ def mock_connection_pool():
     return pool
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def oracle_connection(mock_connection_pool, mock_connection):
     """Create an OracleConnection instance with mocked dependencies"""
     connection_string = "testuser/testpass@localhost:1521/testdb"
@@ -60,13 +61,13 @@ async def oracle_connection(mock_connection_pool, mock_connection):
     return oracle_conn
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def database_inspector(oracle_connection):
     """Create a DatabaseInspector instance with mocked dependencies"""
     return DatabaseInspector(oracle_connection)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def query_executor(oracle_connection):
     """Create a QueryExecutor instance with mocked dependencies"""
     return QueryExecutor(oracle_connection)
@@ -106,10 +107,12 @@ def sample_view_data():
 @pytest.fixture
 def sample_procedure_data():
     """Sample procedure data for testing"""
+    from datetime import datetime
+    test_date = datetime(2023, 1, 1, 10, 30, 45)
     return [
-        ("HR", "ADD_EMPLOYEE", "PROCEDURE", "VALID", "2023-01-01", "2023-01-01"),
-        ("HR", "GET_EMPLOYEE_COUNT", "FUNCTION", "VALID", "2023-01-01", "2023-01-01"),
-        ("HR", "EMP_PACKAGE", "PACKAGE", "VALID", "2023-01-01", "2023-01-01"),
+        ("HR", "ADD_EMPLOYEE", "PROCEDURE", "VALID", test_date, test_date),
+        ("HR", "GET_EMPLOYEE_COUNT", "FUNCTION", "VALID", test_date, test_date),
+        ("HR", "EMP_PACKAGE", "PACKAGE", "VALID", test_date, test_date),
     ]
 
 
@@ -167,16 +170,21 @@ def mock_env_vars():
 def mock_mcp_server():
     """Mock MCP server for testing"""
     server = MagicMock()
-    server.list_resources = MagicMock()
-    server.read_resource = MagicMock()
-    server.list_tools = MagicMock()
-    server.call_tool = MagicMock()
+    
+    # Mock decorators to return a function that can be called
+    def mock_decorator(func):
+        return func
+    
+    server.list_resources = MagicMock(return_value=mock_decorator)
+    server.read_resource = MagicMock(return_value=mock_decorator)
+    server.list_tools = MagicMock(return_value=mock_decorator)
+    server.call_tool = MagicMock(return_value=mock_decorator)
     server.get_capabilities = MagicMock()
     server.run = AsyncMock()
     return server
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def oracle_mcp_server(mock_mcp_server):
     """Create an OracleMCPServer instance with mocked dependencies"""
     with pytest.MonkeyPatch.context() as m:

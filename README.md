@@ -367,9 +367,25 @@ uv run pytest -v
 - **Slow Tests** (`-m slow`): Performance and stress tests
 
 **For Integration Tests:**
-Set the `TEST_DB_CONNECTION_STRING` environment variable to run integration tests:
+Integration tests require a real Oracle database. Set the `TEST_DB_CONNECTION_STRING` environment variable:
+
+**Using the Docker test database (recommended):**
 ```bash
-export TEST_DB_CONNECTION_STRING="testuser/testpass@localhost:1521/testdb"
+# Make sure Docker database is running
+cd docker-example && docker-compose up -d && cd ..
+
+# Set connection string and run integration tests
+export TEST_DB_CONNECTION_STRING="testuser/TestUser123!@localhost:1521/testdb"
+uv run pytest -m integration
+
+# Or run all tests including integration tests
+export TEST_DB_CONNECTION_STRING="testuser/TestUser123!@localhost:1521/testdb"
+uv run pytest
+```
+
+**Using your own Oracle database:**
+```bash
+export TEST_DB_CONNECTION_STRING="your_user/your_password@your_host:1521/your_service"
 uv run pytest -m integration
 ```
 

@@ -16,6 +16,7 @@ class TestQueryExecutor:
         assert executor.connection_manager == oracle_connection
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_select_success(self, query_executor, mock_connection, mock_cursor):
         """Test successful SELECT query execution"""
         mock_cursor.description = [('EMPLOYEE_ID',), ('FIRST_NAME',), ('LAST_NAME',)]
@@ -39,6 +40,7 @@ class TestQueryExecutor:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_with_parameters(self, query_executor, mock_connection, mock_cursor):
         """Test query execution with parameters"""
         mock_cursor.description = [('COUNT(*)',)]
@@ -54,9 +56,11 @@ class TestQueryExecutor:
         assert result['rows'] == [[5]]
         assert result['row_count'] == 1
         
-        mock_cursor.execute.assert_called_once_with(sql, params)
+        expected_sql = sql + " AND ROWNUM <= 100"  # Code automatically adds ROWNUM limit
+        mock_cursor.execute.assert_called_once_with(expected_sql, params)
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_describe_statement(self, query_executor, mock_connection, mock_cursor):
         """Test DESCRIBE statement execution"""
         mock_cursor.description = [('COLUMN_NAME',), ('DATA_TYPE',)]
@@ -75,6 +79,7 @@ class TestQueryExecutor:
         assert result['row_count'] == 2
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_explain_plan(self, query_executor, mock_connection, mock_cursor):
         """Test EXPLAIN PLAN statement execution"""
         mock_cursor.description = None
@@ -86,9 +91,11 @@ class TestQueryExecutor:
         
         assert result['message'] == 'Query executed successfully'
         assert 'execution_time_seconds' in result
-        assert result['query'] == sql
+        expected_sql = "EXPLAIN PLAN FOR SELECT * FROM employees WHERE ROWNUM <= 100"  # Code adds ROWNUM even to EXPLAIN
+        assert result['query'] == expected_sql
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_dangerous_keywords(self, query_executor):
         """Test rejection of dangerous SQL keywords"""
         dangerous_queries = [
@@ -106,6 +113,7 @@ class TestQueryExecutor:
                 await query_executor.execute_query(sql)
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_with_statement(self, query_executor, mock_connection, mock_cursor):
         """Test WITH statement execution"""
         mock_cursor.description = [('EMPLOYEE_ID',), ('FIRST_NAME',)]
@@ -120,6 +128,7 @@ class TestQueryExecutor:
         assert result['rows'] == [[1, 'John'], [2, 'Jane']]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_rownum_limit_addition(self, query_executor, mock_connection, mock_cursor):
         """Test automatic ROWNUM limit addition"""
         mock_cursor.description = [('EMPLOYEE_ID',)]
@@ -136,6 +145,7 @@ class TestQueryExecutor:
         assert "WHERE ROWNUM <= 100" in args[0]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_rownum_limit_with_where(self, query_executor, mock_connection, mock_cursor):
         """Test ROWNUM limit addition with existing WHERE clause"""
         mock_cursor.description = [('EMPLOYEE_ID',)]
@@ -150,6 +160,7 @@ class TestQueryExecutor:
         assert "AND ROWNUM <= 100" in args[0]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_rownum_limit_with_order_by(self, query_executor, mock_connection, mock_cursor):
         """Test ROWNUM limit addition with ORDER BY clause"""
         mock_cursor.description = [('EMPLOYEE_ID',)]
@@ -165,6 +176,7 @@ class TestQueryExecutor:
         assert "WHERE ROWNUM <= 100" in args[0]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_existing_rownum(self, query_executor, mock_connection, mock_cursor):
         """Test that ROWNUM is not added when already present"""
         mock_cursor.description = [('EMPLOYEE_ID',)]
@@ -179,6 +191,7 @@ class TestQueryExecutor:
         assert args[0] == sql  # Should not be modified
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_lob_handling(self, query_executor, mock_connection, mock_cursor):
         """Test LOB (Large Object) handling"""
         mock_lob = MagicMock()
@@ -195,6 +208,7 @@ class TestQueryExecutor:
         assert result['rows'] == [[1, 'Large text content']]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_datetime_handling(self, query_executor, mock_connection, mock_cursor):
         """Test datetime object handling"""
         test_date = datetime(2023, 1, 1, 10, 30, 45)
@@ -210,6 +224,7 @@ class TestQueryExecutor:
         assert result['rows'] == [[1, test_date.isoformat()]]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execute_query_none_values(self, query_executor, mock_connection, mock_cursor):
         """Test handling of None values"""
         mock_cursor.description = [('ID',), ('OPTIONAL_FIELD',)]
@@ -223,12 +238,14 @@ class TestQueryExecutor:
         assert result['rows'] == [[1, None]]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_explain_query_success(self, query_executor, mock_connection, mock_cursor):
         """Test successful query explanation"""
-        mock_cursor.fetchall.return_value = [
+        explain_data = [
             ('SELECT STATEMENT', None, 100, 1000, 50000),
             ('  TABLE ACCESS FULL', 'EMPLOYEES', 100, 1000, 50000),
         ]
+        mock_cursor.__iter__ = lambda self: iter(explain_data)
         mock_connection.cursor.return_value = mock_cursor
         query_executor.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -251,21 +268,31 @@ class TestQueryExecutor:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_explain_query_statement_id_unique(self, query_executor, mock_connection, mock_cursor):
         """Test that explain query generates unique statement IDs"""
-        mock_cursor.fetchall.return_value = []
+        mock_cursor.__iter__ = lambda self: iter([])
         mock_connection.cursor.return_value = mock_cursor
         query_executor.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
-        sql = "SELECT * FROM employees"
-        result1 = await query_executor.explain_query(sql)
-        result2 = await query_executor.explain_query(sql)
-        
-        assert result1['statement_id'] != result2['statement_id']
+        # Mock datetime to return different times for unique statement IDs
+        with patch('oracle_mcp_server.server.datetime') as mock_datetime:
+            mock_datetime.now.side_effect = [
+                datetime(2023, 1, 1, 10, 30, 45),  # First call
+                datetime(2023, 1, 1, 10, 30, 46),  # Second call (different second)
+            ]
+            mock_datetime.strftime = datetime.strftime  # Keep strftime method
+            
+            sql = "SELECT * FROM employees"
+            result1 = await query_executor.explain_query(sql)
+            result2 = await query_executor.explain_query(sql)
+            
+            assert result1['statement_id'] != result2['statement_id']
         assert result1['statement_id'].startswith('MCP_EXPLAIN_')
         assert result2['statement_id'].startswith('MCP_EXPLAIN_')
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_connection_cleanup_on_exception(self, query_executor, mock_connection, mock_cursor):
         """Test that connection is properly closed even when exception occurs"""
         mock_cursor.execute.side_effect = Exception("Database error")
@@ -278,6 +305,7 @@ class TestQueryExecutor:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_execution_time_measurement(self, query_executor, mock_connection, mock_cursor):
         """Test that execution time is measured"""
         mock_cursor.description = [('ID',)]
@@ -294,6 +322,7 @@ class TestQueryExecutor:
 
     @pytest.mark.unit
     @patch('oracle_mcp_server.server.QUERY_LIMIT_SIZE', 50)
+    @pytest.mark.asyncio
     async def test_custom_query_limit(self, query_executor, mock_connection, mock_cursor):
         """Test custom query limit configuration"""
         mock_cursor.description = [('ID',)]

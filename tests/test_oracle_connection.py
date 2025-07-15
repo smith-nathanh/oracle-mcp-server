@@ -27,6 +27,7 @@ class TestOracleConnection:
 
     @pytest.mark.unit
     @patch('oracledb.create_pool')
+    @pytest.mark.asyncio
     async def test_initialize_pool_success(self, mock_create_pool):
         """Test successful pool initialization"""
         mock_pool = MagicMock()
@@ -50,6 +51,7 @@ class TestOracleConnection:
 
     @pytest.mark.unit
     @patch('oracledb.create_pool')
+    @pytest.mark.asyncio
     async def test_initialize_pool_no_credentials(self, mock_create_pool):
         """Test pool initialization without user/password"""
         mock_pool = MagicMock()
@@ -71,6 +73,7 @@ class TestOracleConnection:
 
     @pytest.mark.unit
     @patch('oracledb.create_pool')
+    @pytest.mark.asyncio
     async def test_initialize_pool_no_at_symbol(self, mock_create_pool):
         """Test pool initialization with connection string without @ symbol"""
         mock_pool = MagicMock()
@@ -91,6 +94,7 @@ class TestOracleConnection:
         )
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_initialize_pool_empty_connection_string(self):
         """Test pool initialization with empty connection string"""
         oracle_conn = OracleConnection("")
@@ -99,6 +103,7 @@ class TestOracleConnection:
             await oracle_conn.initialize_pool()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_initialize_pool_none_connection_string(self):
         """Test pool initialization with None connection string"""
         oracle_conn = OracleConnection(None)
@@ -108,6 +113,7 @@ class TestOracleConnection:
 
     @pytest.mark.unit
     @patch('oracledb.create_pool')
+    @pytest.mark.asyncio
     async def test_initialize_pool_oracledb_exception(self, mock_create_pool):
         """Test pool initialization with oracledb exception"""
         mock_create_pool.side_effect = oracledb.Error("Database connection failed")
@@ -120,6 +126,7 @@ class TestOracleConnection:
 
     @pytest.mark.unit
     @patch('oracledb.create_pool')
+    @pytest.mark.asyncio
     async def test_get_connection_pool_exists(self, mock_create_pool):
         """Test getting connection when pool already exists"""
         mock_pool = MagicMock()
@@ -141,6 +148,7 @@ class TestOracleConnection:
 
     @pytest.mark.unit
     @patch('oracledb.create_pool')
+    @pytest.mark.asyncio
     async def test_get_connection_pool_not_exists(self, mock_create_pool):
         """Test getting connection when pool doesn't exist"""
         mock_pool = MagicMock()

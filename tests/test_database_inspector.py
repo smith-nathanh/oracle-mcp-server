@@ -16,9 +16,11 @@ class TestDatabaseInspector:
         assert inspector.connection_manager == oracle_connection
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_tables_success(self, database_inspector, mock_connection, mock_cursor, sample_table_data):
         """Test successful table retrieval"""
-        mock_cursor.fetchall.return_value = sample_table_data
+        # Make cursor iterable by setting __iter__ to return sample_table_data
+        mock_cursor.__iter__ = lambda self: iter(sample_table_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -35,9 +37,12 @@ class TestDatabaseInspector:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_tables_with_owner_filter(self, database_inspector, mock_connection, mock_cursor, sample_table_data):
         """Test table retrieval with owner filter"""
-        mock_cursor.fetchall.return_value = sample_table_data
+        # Make cursor iterable by setting __iter__ to return sample_table_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_table_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -52,9 +57,12 @@ class TestDatabaseInspector:
 
     @pytest.mark.unit
     @patch('oracle_mcp_server.server.TABLE_WHITE_LIST', ['EMPLOYEES', 'DEPARTMENTS'])
+    @pytest.mark.asyncio
     async def test_get_tables_with_whitelist(self, database_inspector, mock_connection, mock_cursor, sample_table_data):
         """Test table retrieval with table whitelist"""
-        mock_cursor.fetchall.return_value = sample_table_data
+        # Make cursor iterable by setting __iter__ to return sample_table_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_table_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -70,6 +78,7 @@ class TestDatabaseInspector:
         assert 'DEPARTMENTS' in args[1]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_tables_with_date_handling(self, database_inspector, mock_connection, mock_cursor):
         """Test table retrieval with date handling"""
         test_date = datetime(2023, 1, 1, 10, 30, 45)
@@ -77,7 +86,7 @@ class TestDatabaseInspector:
             ("HR", "EMPLOYEES", 100, test_date, "Employee table", "USERS"),
         ]
         
-        mock_cursor.fetchall.return_value = table_data
+        mock_cursor.__iter__ = lambda self: iter(table_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -87,9 +96,12 @@ class TestDatabaseInspector:
         assert tables[0]['last_analyzed'] == test_date.isoformat()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_table_columns_success(self, database_inspector, mock_connection, mock_cursor, sample_column_data):
         """Test successful column retrieval"""
-        mock_cursor.fetchall.return_value = sample_column_data
+        # Make cursor iterable by setting __iter__ to return sample_column_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_column_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -105,9 +117,12 @@ class TestDatabaseInspector:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_table_columns_with_owner(self, database_inspector, mock_connection, mock_cursor, sample_column_data):
         """Test column retrieval with owner filter"""
-        mock_cursor.fetchall.return_value = sample_column_data
+        # Make cursor iterable by setting __iter__ to return sample_column_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_column_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -122,9 +137,12 @@ class TestDatabaseInspector:
 
     @pytest.mark.unit
     @patch('oracle_mcp_server.server.COLUMN_WHITE_LIST', ['EMPLOYEES.EMPLOYEE_ID', 'EMPLOYEES.FIRST_NAME'])
+    @pytest.mark.asyncio
     async def test_get_table_columns_with_whitelist(self, database_inspector, mock_connection, mock_cursor, sample_column_data):
         """Test column retrieval with column whitelist"""
-        mock_cursor.fetchall.return_value = sample_column_data
+        # Make cursor iterable by setting __iter__ to return sample_column_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_column_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -136,9 +154,12 @@ class TestDatabaseInspector:
         assert columns[1]['column_name'] == 'FIRST_NAME'
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_views_success(self, database_inspector, mock_connection, mock_cursor, sample_view_data):
         """Test successful view retrieval"""
-        mock_cursor.fetchall.return_value = sample_view_data
+        # Make cursor iterable by setting __iter__ to return sample_view_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_view_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -153,9 +174,12 @@ class TestDatabaseInspector:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_views_with_owner_filter(self, database_inspector, mock_connection, mock_cursor, sample_view_data):
         """Test view retrieval with owner filter"""
-        mock_cursor.fetchall.return_value = sample_view_data
+        # Make cursor iterable by setting __iter__ to return sample_view_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_view_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -169,9 +193,12 @@ class TestDatabaseInspector:
         assert 'HR' in args[1]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_procedures_success(self, database_inspector, mock_connection, mock_cursor, sample_procedure_data):
         """Test successful procedure retrieval"""
-        mock_cursor.fetchall.return_value = sample_procedure_data
+        # Make cursor iterable by setting __iter__ to return sample_procedure_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_procedure_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -187,9 +214,12 @@ class TestDatabaseInspector:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_procedures_with_owner_filter(self, database_inspector, mock_connection, mock_cursor, sample_procedure_data):
         """Test procedure retrieval with owner filter"""
-        mock_cursor.fetchall.return_value = sample_procedure_data
+        # Make cursor iterable by setting __iter__ to return sample_procedure_data
+
+        mock_cursor.__iter__ = lambda self: iter(sample_procedure_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -203,6 +233,7 @@ class TestDatabaseInspector:
         assert 'HR' in args[1]
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_get_procedures_with_date_handling(self, database_inspector, mock_connection, mock_cursor):
         """Test procedure retrieval with date handling"""
         test_date = datetime(2023, 1, 1, 10, 30, 45)
@@ -210,7 +241,7 @@ class TestDatabaseInspector:
             ("HR", "ADD_EMPLOYEE", "PROCEDURE", "VALID", test_date, test_date),
         ]
         
-        mock_cursor.fetchall.return_value = procedure_data
+        mock_cursor.__iter__ = lambda self: iter(procedure_data)
         mock_connection.cursor.return_value = mock_cursor
         database_inspector.connection_manager.get_connection = AsyncMock(return_value=mock_connection)
         
@@ -221,6 +252,7 @@ class TestDatabaseInspector:
         assert procedures[0]['last_ddl_time'] == test_date.isoformat()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_connection_cleanup_on_exception(self, database_inspector, mock_connection, mock_cursor):
         """Test that connection is properly closed even when exception occurs"""
         mock_cursor.execute.side_effect = Exception("Database error")
@@ -233,6 +265,7 @@ class TestDatabaseInspector:
         mock_connection.close.assert_called_once()
 
     @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_empty_results_handling(self, database_inspector, mock_connection, mock_cursor):
         """Test handling of empty results"""
         mock_cursor.fetchall.return_value = []

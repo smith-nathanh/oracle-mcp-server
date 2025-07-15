@@ -1,6 +1,6 @@
 # Oracle MCP Server
 
-Oracle Database MCP Server for GitHub Copilot Agent Mode
+Oracle Database MCP Server - Execute SQL queries, browse schemas, and analyze performance. 
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ Oracle Database MCP Server for GitHub Copilot Agent Mode
 
 ## Overview
 
-This Model Context Protocol (MCP) server provides comprehensive Oracle Database interaction capabilities, optimized for use with GitHub Copilot's agentic workflows.
+This Model Context Protocol (MCP) server provides comprehensive Oracle Database interaction capabilities for AI assistants and development environments. Execute SQL queries safely, explore database schemas, analyze query performance, export data in multiple formats, and get intelligent database insights through any MCP-compatible client.
 
 ### Features
 

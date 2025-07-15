@@ -52,10 +52,10 @@ docs = [
 oracle-mcp-server = "oracle_mcp_server.server:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/oracle-mcp-server"
-Repository = "https://github.com/yourusername/oracle-mcp-server"
-Issues = "https://github.com/yourusername/oracle-mcp-server/issues"
-Documentation = "https://github.com/yourusername/oracle-mcp-server/wiki"
+Homepage = "https://github.com/smith-nathanh/oracle-mcp-server"
+Repository = "https://github.com/smith-nathanh/oracle-mcp-server"
+Issues = "https://github.com/smith-nathanh/oracle-mcp-server/issues"
+Documentation = "https://github.com/smith-nathanh/oracle-mcp-server/wiki"
 
 [tool.uv]
 dev-dependencies = [

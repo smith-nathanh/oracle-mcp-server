@@ -6,7 +6,7 @@ Oracle Database MCP Server - Execute SQL queries, browse schemas, and analyze pe
 
 - [Overview](#overview)
 - [Quick Setup](#quick-setup)
-- [LangGraph Agent Demo](#langgraph-agent-demo) 🤖
+- [Chat Demo](#chat-demo-mcp-chat) 🤖
 - [Docker Setup for Testing](#docker-setup-for-testing) 🐳
 - [VS Code Integration](#vs-code-integration)
 - [Configuration](#configuration)
@@ -139,179 +139,150 @@ When GitHub Copilot interacts with the MCP server, it receives structured data t
 4. **Set up VS Code integration:**
    See the [VS Code Integration](#vs-code-integration) section below for detailed setup instructions.
 
-## LangGraph Agent Demo
+## Chat Demo (mcp-chat)
 
-🤖 **Experience Intelligent Database Research!** 
+🤖 **Want to see how an LLM uses MCP tools step-by-step?**
 
-We've built a complete LangGraph-powered agent system that demonstrates advanced database exploration capabilities, similar to how GitHub Copilot interacts with the MCP server. This multi-agent system provides intelligent, multiturn database research with natural language queries.
+The `mcp-chat` demo provides a simpler, more direct way to interact with your Oracle database through natural language. Unlike the full LangGraph agent demo above, this shows the raw tool usage patterns that LLMs follow when answering database questions.
 
 ### Features
 
-- **Multi-Agent Workflow**: Specialized agents for planning, exploration, query generation, analysis, and coordination
-- **Intelligent Schema Discovery**: Automatically explores and understands database structure
-- **Contextual Query Generation**: Creates optimized SQL queries based on user requests and schema knowledge  
-- **Performance Analysis**: Provides execution plans and optimization insights
-- **Rich Interactive Output**: Beautiful console interface with formatted results and insights
+- **Direct Tool Usage**: Watch the LLM call MCP tools in real-time
+- **Step-by-Step Progress**: See each tool call as it happens
+- **Multiple Model Support**: Works with any OpenRouter-compatible model
+- **Configurable Timeouts**: Control how long complex queries can run
 
 ### Quick Start
 
 ```bash
-# 1. Install demo dependencies
-uv sync --group demo
+# 1. Set up your OpenRouter API key
+export OPENROUTER_API_KEY="your-api-key-here"
 
 # 2. Set up database connection (use Docker example or your own)
 export DB_CONNECTION_STRING="testuser/TestUser123!@localhost:1521/testdb"
 
-# 3. Run interactive demo
-oracle-agent-demo "Show me all tables in the database"
+# 3. Run a simple query
+uv run mcp-chat "What tables are in the database?"
 
-# 4. Try more complex requests
-oracle-agent-demo "Find customers who made large orders and analyze the data"
-oracle-agent-demo "Analyze sales performance and show trends"
+# 4. Run a more complex query with a specific model
+uv run mcp-chat --model openai/gpt-4.1 "Which department has the highest paid employee?"
 ```
 
-### Example Interactions
+### Example: Multi-Turn Tool Usage
 
-The agent can handle complex, open-ended requests like:
-
-- **Schema Exploration**: "What tables and views are available in this database?"
-- **Data Discovery**: "Find all customer information and show me sample data"  
-- **Business Analysis**: "Analyze sales trends and identify top performing products"
-- **Performance Optimization**: "Show me execution plans for the most complex queries"
-
-### Demo Commands
+Here's what happens when you ask "Which department has the highest paid employee?" - notice how the LLM makes multiple tool calls to gather information before providing the answer:
 
 ```bash
-# Show available example requests
-oracle-agent-demo examples
+$ uv run mcp-chat --model openai/gpt-4.1 --timeout 60 "What department has the highest paid employee?"
+Using model: openai/gpt-4.1
+╭────────────────────────────────── Welcome ───────────────────────────────────╮
+│ Oracle Database Assistant                                                    │
+│ I can help you explore and query your Oracle database.                       │
+│ Type 'exit' to quit, 'clear' to start over.                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
 
-# Run with debug logging
-oracle-agent-demo "your request" --debug
+You: What department has the highest paid employee?
+Processing your request...
+🤔 Analyzing your question...
+🔧 Decided to use tools: list_tables
+⚡ Executing list_tables...
+   Preview: {
+  "tables": [
+    {
+      "owner": "AUDSYS",
+      "table_name": "AUD$UNIFIED",
+      "num_rows": 3,
+      "last_analyzed": "2025-07-14T22:00:12",
+ ...
+🤔 Thinking (after 1 tool calls)...
+🔧 Decided to use tools: describe_table, describe_table
+⚡ Executing describe_table...
+   Preview: {
+  "table_name": "EMPLOYEES",
+  "owner": "TESTUSER",
+  "columns": [
+    {
+      "column_name": "ID",
+      "data_type": "NUMBER",
+      "data_length"...
+⚡ Executing describe_table...
+   Preview: {
+  "table_name": "DEPARTMENTS",
+  "owner": "TESTUSER",
+  "columns": [
+    {
+      "column_name": "ID",
+      "data_type": "NUMBER",
+      "data_lengt...
+🤔 Thinking (after 3 tool calls)...
+🔧 Decided to use tools: execute_query
+⚡ Executing execute_query...
+   Preview: {
+  "columns": [
+    "DEPARTMENT_NAME",
+    "FIRST_NAME",
+    "LAST_NAME",
+    "SALARY"
+  ],
+  "rows": [
+    [
+      "Engineering",
+      "Jane",
+    ...
+🤔 Thinking (after 4 tool calls)...
+💬 Ready to respond
+Preview: The department with the highest paid employee is Engineering. The 
+highest paid employee is Jane Smit...
+✓ Processing complete
 
-# Use custom connection string
-oracle-agent-demo "your request" --connection "user/pass@host:port/service"
-
-# Run comprehensive examples script
-python demo_examples.py
+Assistant:
+The department with the highest paid employee is Engineering. The highest paid  
+employee is Jane Smith, with a salary of $85,000.
 ```
 
-### Architecture
+### Understanding the Tool Flow
 
-The demo showcases a sophisticated multi-agent architecture:
+In the example above, the LLM follows a logical progression:
 
-1. **Planner Agent**: Analyzes requests and creates research plans
-2. **Explorer Agent**: Discovers database schema and samples data
-3. **Query Generator Agent**: Creates optimized SQL queries
-4. **Analyst Agent**: Interprets results and provides insights  
-5. **Coordinator Agent**: Manages workflow and generates final responses
+1. **Discovery** (`list_tables`): First explores what tables are available
+2. **Schema Understanding** (`describe_table` x2): Examines the structure of EMPLOYEES and DEPARTMENTS tables
+3. **Query Execution** (`execute_query`): Runs a SQL query joining the tables to find the highest salary
+4. **Final Answer**: Provides the specific result from the query data
 
-This demonstrates the same intelligent, exploratory behavior that GitHub Copilot exhibits when working with the Oracle MCP server, but in a standalone, customizable format.
+This demonstrates how LLMs break down complex questions into discrete tool calls, gathering information step-by-step before synthesizing a final answer.
 
-### Example Output
-
-Here's what the LangGraph agent demo looks like in action:
+### Command Options
 
 ```bash
-$ oracle-agent-demo demo "Find employees data and show me some insights"
+# Use a specific model (default: openai/gpt-4.1)
+uv run mcp-chat --model anthropic/claude-3-haiku "your question"
+
+# Set custom timeout for complex queries (default: 60 seconds)
+uv run mcp-chat --timeout 120 "complex analysis question"
+
+# Enable debug logging
+uv run mcp-chat --debug "your question"
+
+# Interactive mode (no initial question)
+uv run mcp-chat
+
+# Get help
+uv run mcp-chat --help
 ```
 
-```
-╭───────────────────────────── Oracle Agent Demo ──────────────────────────────╮
-│ Database Research Request:                                                   │
-│ Find employees data and show me some insights                                │
-╰──────────────────────────────────────────────────────────────────────────────╯
-Starting MCP server and agents...
-⠦ Research complete!
-╭────────────────────────────── Research Results ──────────────────────────────╮
-│ I completed 2 research tasks to answer your request:                         │
-│ ✓ Discover database schema (tables, views, procedures)                       │
-│ ✓ General database exploration to understand structure                       │
-│                                                                              │
-│ Database Overview:                                                           │
-│ - Found 1685 tables, 1756 views, 465 procedures                              │
-│ - Analyzed 10 tables in detail                                               │
-╰──────────────────────────────────────────────────────────────────────────────╯
+### Supported Models
 
-Agent Conversation Flow:
-agent (planner): Planning research for: Find employees data and show me some insights
-agent (planner): Created 1 research tasks
-agent (explorer): Exploring database schema...
-agent (explorer): Discovered 1685 tables, 1756 views, 465 procedures
-agent (coordinator): Completing remaining task: General database exploration to understand structure
-assistant (coordinator): I completed 2 research tasks to answer your request:
-✓ Discover database schema (tables, views, procedures)
-✓ General database exploration to understand structure
+The chat interface works with any OpenRouter-compatible model. Some popular options:
 
-Database Overview:
-- Found 1685 tables, 1756 views, 465 procedures
-- Analyzed 10 tables in detail
+- `openai/gpt-4.1`
+- `anthropic/claude-sonnet-4`
 
-╭────────────────────────── Database Schema Summary ───────────────────────────╮
-│ Database Schema Summary:                                                     │
-│ - Tables: 1685                                                               │
-│ - Views: 1756                                                                │
-│ - Procedures: 465                                                            │
-│ - Detailed table info: 10                                                    │
-│                                                                              │
-│ Key Tables:                                                                  │
-│   - EMPLOYEES: Employee information                                          │
-│   - DEPARTMENTS: Department structure                                        │
-│   - ORDERS: Customer orders and transactions                                 │
-│   - PRODUCTS: Product catalog                                                │
-│   - CUSTOMERS: Customer database                                             │
-╰──────────────────────────────────────────────────────────────────────────────╯
+### Tips for Best Results
 
-Completed Research Tasks:
-✓ Discover database schema (tables, views, procedures)
-  • tables_found: 1685
-  • views_found: 1756
-  • procedures_found: 465
-  • detailed_tables: 10
-✓ General database exploration to understand structure
-  • status: completed_by_coordinator
-```
-
-**Available Example Commands:**
-
-```bash
-# Show all available example requests
-$ oracle-agent-demo examples
-
-╭────────────────────────────────── Examples ──────────────────────────────────╮
-│ Oracle Database Research Agent - Example Requests                            │
-╰──────────────────────────────────────────────────────────────────────────────╯
-
-Database Exploration:
-  • Show me all the tables in the database
-  • What views are available in the database?
-  • List all stored procedures and functions
-  • Describe the structure of the EMPLOYEES table
-
-Data Discovery:
-  • Find all customers in the database
-  • Show me sample data from the orders table
-  • What products do we have in inventory?
-  • Find the most recent transactions
-
-Business Analysis:
-  • Analyze sales performance by region
-  • Find customers who made large orders
-  • Show me trends in our order data
-  • Generate a report on customer activity
-
-Performance Analysis:
-  • Analyze the performance of queries on the sales table
-  • Find tables that might need indexing
-  • Show me execution plans for complex queries
-  • Identify potential performance bottlenecks
-```
-
-The demo showcases:
-- **Rich console interface** with formatted panels and tables
-- **Multi-agent coordination** visible in conversation flow
-- **Intelligent task breakdown** from user requests
-- **Comprehensive database discovery** with metadata analysis
-- **Real-time progress tracking** with visual indicators
+1. **Be Specific**: "Show me salaries by department" works better than "tell me about employees"
+2. **Watch the Progress**: The tool calls show you exactly how the LLM is thinking
+3. **Adjust Timeouts**: Complex analytical queries may need more time
+4. **Try Different Models**: Some models are better at following multi-step instructions
 
 ## Docker Setup for Testing
 

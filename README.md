@@ -143,7 +143,7 @@ When GitHub Copilot interacts with the MCP server, it receives structured data t
 
 🤖 **Want to see how an LLM uses MCP tools step-by-step?**
 
-The `mcp-chat` demo provides a simpler, more direct way to interact with your Oracle database through natural language. Unlike the full LangGraph agent demo above, this shows the raw tool usage patterns that LLMs follow when answering database questions.
+The `mcp-chat` demo provides a demo on how an agent can connect to and query your Oracle database. This demo shows the raw tool usage patterns that LLMs follow when answering database questions using the MCP server.
 
 ### Features
 
@@ -173,8 +173,8 @@ uv run mcp-chat --model openai/gpt-4.1 "Which department has the highest paid em
 Here's what happens when you ask "Which department has the highest paid employee?" - notice how the LLM makes multiple tool calls to gather information before providing the answer:
 
 ```bash
-$ uv run mcp-chat --model openai/gpt-4.1 --timeout 60 "What department has the highest paid employee?"
-Using model: openai/gpt-4.1
+$ uv run mcp-chat --model google/gemini-2.5-flash --timeout 120 "What department has the highest paid employee?"
+Using model: google/gemini-2.5-flash
 ╭────────────────────────────────── Welcome ───────────────────────────────────╮
 │ Oracle Database Assistant                                                    │
 │ I can help you explore and query your Oracle database.                       │
@@ -183,62 +183,63 @@ Using model: openai/gpt-4.1
 
 You: What department has the highest paid employee?
 Processing your request...
-🤔 Analyzing your question...
-🔧 Decided to use tools: list_tables
-⚡ Executing list_tables...
+Analyzing (iteration 1)...
+Using tools: list_tables
+Executing list_tables...
    Preview: {
   "tables": [
     {
-      "owner": "AUDSYS",
-      "table_name": "AUD$UNIFIED",
+      "owner": "TESTUSER",
+      "table_name": "DEPARTMENTS",
       "num_rows": 3,
       "last_analyzed": "2025-07-14T22:00:12",
- ...
-🤔 Thinking (after 1 tool calls)...
-🔧 Decided to use tools: describe_table, describe_table
-⚡ Executing describe_table...
+      "table_comment": null,
+      "tablespace_na...
+Analyzing (iteration 2)...
+Using tools: describe_table
+Executing describe_table...
    Preview: {
   "table_name": "EMPLOYEES",
-  "owner": "TESTUSER",
+  "owner": null,
   "columns": [
     {
       "column_name": "ID",
       "data_type": "NUMBER",
-      "data_length"...
-⚡ Executing describe_table...
+      "data_length": 22,
+      "data_precision": 10,
+      "data_scale": 0,...
+Analyzing (iteration 3)...
+Using tools: describe_table
+Executing describe_table...
    Preview: {
   "table_name": "DEPARTMENTS",
-  "owner": "TESTUSER",
+  "owner": null,
   "columns": [
     {
       "column_name": "ID",
       "data_type": "NUMBER",
-      "data_lengt...
-🤔 Thinking (after 3 tool calls)...
-🔧 Decided to use tools: execute_query
-⚡ Executing execute_query...
+      "data_length": 22,
+      "data_precision": 10,
+      "data_scale": ...
+Analyzing (iteration 4)...
+Using tools: execute_query
+Executing execute_query...
    Preview: {
   "columns": [
-    "DEPARTMENT_NAME",
-    "FIRST_NAME",
-    "LAST_NAME",
-    "SALARY"
+    "DEPARTMENT_NAME"
   ],
   "rows": [
     [
-      "Engineering",
-      "Jane",
-    ...
-🤔 Thinking (after 4 tool calls)...
-💬 Ready to respond
-Preview: The department with the highest paid employee is Engineering. The 
-highest paid employee is Jane Smit...
-✓ Processing complete
-
-Assistant:
-The department with the highest paid employee is Engineering. The highest paid  
-employee is Jane Smith, with a salary of $85,000.
-```
+      "Engineering"
+    ]
+  ],
+  "row_count": 1,
+  "execution_time_seconds": 0.002093,
+  "query": "SELECT * FROM (SELECT d.name AS departm...
+Analyzing (iteration 5)...
+Ready to respond
+Preview: The department with the highest paid employee is Engineering.
+Processing complete
 
 ### Understanding the Tool Flow
 
@@ -246,7 +247,7 @@ In the example above, the LLM follows a logical progression:
 
 1. **Discovery** (`list_tables`): First explores what tables are available
 2. **Schema Understanding** (`describe_table` x2): Examines the structure of EMPLOYEES and DEPARTMENTS tables
-3. **Query Execution** (`execute_query`): Runs a SQL query joining the tables to find the highest salary
+3. **Query Execution** (`execute_query`): Runs a SQL query
 4. **Final Answer**: Provides the specific result from the query data
 
 This demonstrates how LLMs break down complex questions into discrete tool calls, gathering information step-by-step before synthesizing a final answer.
@@ -255,7 +256,7 @@ This demonstrates how LLMs break down complex questions into discrete tool calls
 
 ```bash
 # Use a specific model (default: openai/gpt-4.1)
-uv run mcp-chat --model anthropic/claude-3-haiku "your question"
+uv run mcp-chat --model openai/gpt-4.1 "your question"
 
 # Set custom timeout for complex queries (default: 60 seconds)
 uv run mcp-chat --timeout 120 "complex analysis question"
@@ -272,10 +273,7 @@ uv run mcp-chat --help
 
 ### Supported Models
 
-The chat interface works with any OpenRouter-compatible model. Some popular options:
-
-- `openai/gpt-4.1`
-- `anthropic/claude-sonnet-4`
+The chat interface works with any OpenRouter-compatible model, but you'll want to use one that is adept at tool calling such as `openai/gpt-4.1`.
 
 ### Tips for Best Results
 

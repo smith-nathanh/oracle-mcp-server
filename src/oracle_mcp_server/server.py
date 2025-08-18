@@ -136,36 +136,64 @@ class DatabaseInspector:
         try:
             cursor = conn.cursor()
 
-            # Base query for tables
-            query = """
-                SELECT 
-                    t.owner,
-                    t.table_name,
-                    t.num_rows,
-                    t.last_analyzed,
-                    tc.comments as table_comment,
-                    t.tablespace_name
-                FROM all_tables t
-                LEFT JOIN all_tab_comments tc ON t.owner = tc.owner AND t.table_name = tc.table_name
-                WHERE 1=1
-            """
+            # Security: Only show tables the connected user actually owns or has access to
+            # This prevents any access to system schemas or unauthorized tables
 
-            params = []
-
-            # Filter by owner if specified
             if owner:
-                query += " AND t.owner = :owner"
-                params.append(owner)
+                # When owner is specified, verify the connected user has access
+                query = """
+                    SELECT 
+                        t.owner,
+                        t.table_name,
+                        t.num_rows,
+                        t.last_analyzed,
+                        tc.comments as table_comment,
+                        t.tablespace_name
+                    FROM all_tables t
+                    LEFT JOIN all_tab_comments tc ON t.owner = tc.owner AND t.table_name = tc.table_name
+                    WHERE t.owner = :owner
+                      AND (t.owner = USER OR EXISTS (
+                          SELECT 1 FROM all_tab_privs p 
+                          WHERE p.table_name = t.table_name 
+                            AND p.table_schema = t.owner 
+                            AND p.grantee IN (USER, 'PUBLIC')
+                      ))
+                """
+                params = [owner]
+            else:
+                # Default: Only show tables owned by the current connected user
+                # For testuser, this will only show EMPLOYEES, DEPARTMENTS, etc.
+                query = """
+                    SELECT 
+                        USER as owner,
+                        t.table_name,
+                        t.num_rows,
+                        t.last_analyzed,
+                        tc.comments as table_comment,
+                        t.tablespace_name
+                    FROM user_tables t
+                    LEFT JOIN user_tab_comments tc ON t.table_name = tc.table_name
+                """
+                params = []
 
             # Apply whitelist filter if configured
             if TABLE_WHITE_LIST and TABLE_WHITE_LIST != [""]:
                 placeholders = ",".join(
                     [f":table_{i}" for i in range(len(TABLE_WHITE_LIST))]
                 )
-                query += f" AND t.table_name IN ({placeholders})"
+                if owner:
+                    # For all_tables query with owner specified
+                    query += f" AND t.table_name IN ({placeholders})"
+                else:
+                    # For user_tables query (no owner)
+                    query += f" AND t.table_name IN ({placeholders})"
                 params.extend(TABLE_WHITE_LIST)
 
-            query += " ORDER BY t.owner, t.table_name"
+            # Order by clause depends on query type
+            if owner:
+                query += " ORDER BY t.owner, t.table_name"
+            else:
+                query += " ORDER BY t.table_name"
 
             cursor.execute(query, params)
 

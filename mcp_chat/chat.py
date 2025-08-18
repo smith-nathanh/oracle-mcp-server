@@ -8,8 +8,8 @@ questions about the database through natural conversation.
 
 import asyncio
 import os
-import sys
 from typing import Optional
+
 import typer
 
 # Try to load .env file if available
@@ -20,19 +20,19 @@ try:
 except ImportError:
     # dotenv not available, continue without it
     pass
-from rich.console import Console
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.prompt import Prompt
-from langchain_core.messages import HumanMessage
 import logging
 
-from demo.mcp_client import MCPClient
-from .llm import OpenRouterLLM
-from .graph import MCPChatGraph, ChatState
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.prompt import Prompt
 
-# Setup logging - suppress by default
-logging.basicConfig(level=logging.WARNING)
+from .agent import DatabaseAgent
+from .llm import OpenRouterLLM
+from .mcp_client import MCPClient
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 console = Console()
@@ -47,12 +47,8 @@ async def run_chat_loop(
     timeout: float = 60.0,
 ):
     """Run the interactive chat loop."""
-    # Create the graph with status callback
-    graph = MCPChatGraph(llm, mcp_client, console)
-    workflow = graph.graph
-
-    # Initialize state with loop protection
-    state = ChatState(messages=[], tool_call_count=0, max_tool_calls=10)
+    # Create the database agent
+    chat_client = DatabaseAgent(llm, mcp_client, console)
 
     console.print(
         Panel(
@@ -66,60 +62,29 @@ async def run_chat_loop(
     # Process initial message if provided
     if initial_message:
         console.print(f"\n[green]You:[/green] {initial_message}")
-        state["messages"].append(HumanMessage(content=initial_message))
+        console.print("Processing your request...")
 
         # Get response with timeout protection
         try:
-            console.print("[dim]Processing your request...[/dim]")
-            result = await asyncio.wait_for(workflow.ainvoke(state), timeout=timeout)
-            state = result
-            console.print("[dim]✓ Processing complete[/dim]")
-        except asyncio.TimeoutError:
-            console.print(f"\n[red]⏱️  Request timed out after {int(timeout)} seconds.[/red]")
-            console.print(
-                "[yellow]The query was complex and needed more time. Here's what was discovered so far:[/yellow]"
+            result = await asyncio.wait_for(
+                chat_client.process_query(initial_message), timeout=timeout
             )
-            # Show any AI messages with content that were generated
-            from langchain_core.messages import AIMessage
 
-            ai_messages = [
-                msg
-                for msg in state["messages"]
-                if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content
-            ]
-            if ai_messages:
-                for msg in ai_messages:
-                    console.print(Markdown(msg.content))
-            return
-
-        # Display response - find all AI messages with content (excluding tool-only messages)
-        from langchain_core.messages import AIMessage
-
-        ai_messages_with_content = [
-            msg
-            for msg in state["messages"]
-            if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content
-        ]
-
-        if ai_messages_with_content:
-            # Show all AI responses, not just the last one
-            for ai_msg in ai_messages_with_content:
+            if result:
                 console.print("\n[blue]Assistant:[/blue]")
-                console.print(Markdown(ai_msg.content))
-        else:
-            # Check if we're still processing (last message is AI with tool calls)
-            last_msg = state["messages"][-1] if state["messages"] else None
-            if (
-                last_msg
-                and isinstance(last_msg, AIMessage)
-                and hasattr(last_msg, "tool_calls")
-                and last_msg.tool_calls
-            ):
-                console.print("\n[dim]Still processing with tools...[/dim]")
+                console.print(Markdown(result))
             else:
                 console.print(
-                    "\n[yellow]The assistant is still thinking. It may need more time to complete the task.[/yellow]"
+                    "\n[yellow]The assistant didn't provide a response. The query may have been too complex.[/yellow]"
                 )
+
+        except asyncio.TimeoutError:
+            console.print(
+                f"\n[red]Request timed out after {int(timeout)} seconds.[/red]"
+            )
+            console.print(
+                "[yellow]The query was complex and needed more time.[/yellow]"
+            )
 
         # If we had an initial message, exit here (don't start interactive loop)
         console.print()  # Add blank line before connection closes
@@ -135,52 +100,30 @@ async def run_chat_loop(
                 console.print("[yellow]Goodbye![/yellow]")
                 break
             elif user_input.lower() == "clear":
-                state = ChatState(messages=[], tool_call_count=0, max_tool_calls=10)
+                chat_client.clear_conversation()
                 console.clear()
                 console.print("[yellow]Conversation cleared.[/yellow]")
                 continue
 
-            # Add user message
-            state["messages"].append(HumanMessage(content=user_input))
-
             # Get response with timeout protection
             try:
-                result = await asyncio.wait_for(workflow.ainvoke(state), timeout=timeout)
-                state = result
+                result = await asyncio.wait_for(
+                    chat_client.process_query(user_input), timeout=timeout
+                )
+
+                if result:
+                    console.print("\n[blue]Assistant:[/blue]")
+                    console.print(Markdown(result))
+                else:
+                    console.print(
+                        "\n[yellow]The assistant didn't provide a response. Try a simpler question.[/yellow]"
+                    )
+
             except asyncio.TimeoutError:
                 console.print(
                     f"[red]Request timed out after {int(timeout)} seconds. Please try a simpler question.[/red]"
                 )
                 continue
-
-            # Display response - find all AI messages with content (excluding tool-only messages)
-            from langchain_core.messages import AIMessage
-
-            ai_messages_with_content = [
-                msg
-                for msg in state["messages"]
-                if isinstance(msg, AIMessage) and hasattr(msg, "content") and msg.content
-            ]
-
-            if ai_messages_with_content:
-                # Show the most recent AI response with content
-                last_ai_msg = ai_messages_with_content[-1]
-                console.print("\n[blue]Assistant:[/blue]")
-                console.print(Markdown(last_ai_msg.content))
-            else:
-                # Check if we're still processing (last message is AI with tool calls)
-                last_msg = state["messages"][-1] if state["messages"] else None
-                if (
-                    last_msg
-                    and isinstance(last_msg, AIMessage)
-                    and hasattr(last_msg, "tool_calls")
-                    and last_msg.tool_calls
-                ):
-                    console.print("\n[dim]Still processing with tools...[/dim]")
-                else:
-                    console.print(
-                        "\n[yellow]The assistant is still thinking. Try asking a follow-up question.[/yellow]"
-                    )
 
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted. Type 'exit' to quit.[/yellow]")
@@ -193,10 +136,16 @@ async def run_chat_loop(
 @app.command()
 def main(
     model: str = typer.Option(
-        None, "--model", "-m", help="OpenRouter model to use (e.g., 'anthropic/claude-3-haiku')"
+        None,
+        "--model",
+        "-m",
+        help="OpenRouter model to use (e.g., 'anthropic/claude-3-haiku')",
     ),
     api_key: str = typer.Option(
-        None, "--api-key", "-k", help="OpenRouter API key (or set OPENROUTER_API_KEY env var)"
+        None,
+        "--api-key",
+        "-k",
+        help="OpenRouter API key (or set OPENROUTER_API_KEY env var)",
     ),
     connection: str = typer.Option(
         None,
@@ -207,7 +156,10 @@ def main(
     debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
     message: str = typer.Argument(None, help="Initial message to send (optional)"),
     timeout: float = typer.Option(
-        60.0, "--timeout", "-t", help="Timeout in seconds for each request (default: 60)"
+        60.0,
+        "--timeout",
+        "-t",
+        help="Timeout in seconds for each request (default: 60)",
     ),
 ):
     """
@@ -254,8 +206,11 @@ def main(
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
 
+    # Set connection string in environment for MCP server
+    os.environ["DB_CONNECTION_STRING"] = connection_string
+
     # Create MCP client
-    mcp_client = MCPClient(connection_string, debug)
+    mcp_client = MCPClient(debug=debug)
 
     async def run():
         async with mcp_client:

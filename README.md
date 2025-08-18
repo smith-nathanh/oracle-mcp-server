@@ -241,6 +241,10 @@ Ready to respond
 Preview: The department with the highest paid employee is Engineering.
 Processing complete
 
+Assistant:
+The department with the highest paid employee is Engineering. 
+```
+
 ### Understanding the Tool Flow
 
 In the example above, the LLM follows a logical progression:

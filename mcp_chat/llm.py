@@ -47,6 +47,10 @@ class OpenRouterLLM:
 
         if tools:
             completion_kwargs["tools"] = tools
+            
+        # Add tool_choice if provided
+        if "tool_choice" in kwargs:
+            completion_kwargs["tool_choice"] = kwargs["tool_choice"]
 
         response = await self.client.chat.completions.create(**completion_kwargs)
         return response.model_dump()

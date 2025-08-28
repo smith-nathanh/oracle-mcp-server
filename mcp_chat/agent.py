@@ -76,10 +76,22 @@ When you need more information to answer a question, ask the user for clarificat
                     f"[green]Analyzing (iteration {iteration_count})...[/green]"
                 )
 
-            # Get LLM response
-            response = await self.llm.create_completion(
-                messages=self.messages, tools=available_tools
-            )
+            # Get LLM response with vLLM error handling
+            try:
+                response = await self.llm.create_completion(
+                    messages=self.messages, tools=available_tools
+                )
+            except Exception as e:
+                # Check for vLLM single tool call limitation error
+                if "model only supports one tool call" in str(e).lower() or "single tool call" in str(e).lower():
+                    if self.console:
+                        self.console.print("[yellow]vLLM limitation detected - retrying with sequential tool calls[/yellow]")
+                    
+                    # Retry with sequential tool calling approach
+                    response = await self._handle_vllm_sequential_retry(available_tools)
+                else:
+                    # Re-raise other errors
+                    raise
 
             choice = response["choices"][0]
             message = choice["message"]
@@ -172,6 +184,56 @@ When you need more information to answer a question, ask the user for clarificat
         # If we hit max iterations, return what we have
         logger.warning(f"Reached maximum iterations ({max_iterations})")
         return "I've reached the maximum number of processing steps. Based on what I've discovered so far, let me provide you with the available information."
+
+    async def _handle_vllm_sequential_retry(self, available_tools: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Handle vLLM sequential retry by making individual tool calls."""
+        # First, get the LLM's intended response without tools to understand what it wants to do
+        response = await self.llm.create_completion(
+            messages=self.messages
+        )
+        
+        choice = response["choices"][0]
+        message = choice["message"]
+        
+        # If the LLM provides a text response, we need to infer what tools it would want
+        # For now, let's try common tools one at a time based on the user's query
+        if message.get("content"):
+            # Try to determine which tool to use based on context
+            user_query = self.messages[-1]["content"].lower() if self.messages else ""
+            
+            # Simple heuristics for tool selection
+            if "table" in user_query or "schema" in user_query:
+                tool_name = "list_tables"
+            elif "describe" in user_query or "structure" in user_query:
+                tool_name = "describe_table"
+            elif "select" in user_query or "query" in user_query:
+                tool_name = "execute_query"
+            else:
+                # Default to list_tables as a starting point
+                tool_name = "list_tables"
+            
+            # Find the tool in available tools
+            selected_tool = next((t for t in available_tools if t["function"]["name"] == tool_name), None)
+            
+            if selected_tool and self.console:
+                self.console.print(f"[cyan]vLLM workaround: Trying {tool_name}[/cyan]")
+            
+            if selected_tool:
+                # Make a new call with just this one tool
+                try:
+                    single_tool_response = await self.llm.create_completion(
+                        messages=self.messages,
+                        tools=[selected_tool],
+                        tool_choice={"type": "function", "function": {"name": tool_name}}
+                    )
+                    return single_tool_response
+                except Exception as e:
+                    if self.console:
+                        self.console.print(f"[red]Single tool call also failed: {e}[/red]")
+                    # Fall back to no-tool response
+                    return response
+        
+        return response
 
     def clear_conversation(self):
         """Clear the conversation history."""
